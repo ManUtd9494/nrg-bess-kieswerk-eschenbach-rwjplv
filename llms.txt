@@ -1,0 +1,9 @@
+# NRG Solution | Batteriespeicher Gemeindekieswerk Eschenbach | 3D-Studie
+
+> Begehbare 3D-Visualisierung eines Batteriespeichers im Gemeindekieswerk Eschenbach LU: automatische Standortwahl, AR-Messungen, Energiefluss mit bestehender PV, Netzanschluss und Heizzentrale. Fiktive Studie mit realen Geodaten.
+
+## Seiten
+
+- [NRG Solution | Batteriespeicher Gemeindekieswerk Eschenbach | 3D-Studie](https://ManUtd9494.github.io/nrg-bess-kieswerk-eschenbach-rwjplv/): Begehbare 3D-Visualisierung eines Batteriespeichers im Gemeindekieswerk Eschenbach LU: automatische Standortwahl, AR-Messungen, Energiefluss mit bestehender PV, Netzanschluss und Heizzentrale. Fiktive
+
+<!-- erzeugt vom CavoraAI Website Builder; eine von Hand gepflegte llms.txt ohne diese Zeile bleibt unverändert -->

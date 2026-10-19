@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NRG Solution | Batteriespeicher Gemeindekieswerk Eschenbach | 3D-Studie</title>
+<meta name="description" content="Begehbare 3D-Visualisierung eines Batteriespeichers im Gemeindekieswerk Eschenbach LU: automatische Standortwahl, AR-Messungen, Energiefluss mit bestehender PV, Netzanschluss und Heizzentrale. Fiktive Studie mit realen Geodaten.">
+<style>
+:root{--navy:#0A2463;--blue:#1E56A0;--green:#047857;--ink:#0B1526;--ink2:#3F4A63;--ink3:#7C879E;--line:#E6E9F0;--line2:#CBD2DE;--ok:#16a34a;--warn:#d97706;--fail:#dc2626;--bg:rgba(255,255,255,.94)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;overflow:hidden;font-family:"Instrument Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:#dfe6ee}
+#app{position:fixed;inset:0}#app canvas{display:block}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+#top{position:fixed;left:0;right:0;top:0;height:54px;display:flex;align-items:center;gap:14px;padding:0 14px;background:var(--bg);border-bottom:1px solid var(--line);z-index:20;backdrop-filter:blur(6px)}
+#top .brand{display:flex;flex-direction:column;line-height:1.1}#top .brand b{font-size:15px;color:var(--navy);letter-spacing:.2px}#top .brand span{font-size:11px;color:var(--ink3)}
+.seg{display:flex;border:1px solid var(--line2);border-radius:8px;overflow:hidden}.seg button{border:0;background:#fff;padding:7px 11px;font:inherit;font-size:12.5px;color:var(--ink2);cursor:pointer;border-right:1px solid var(--line)}.seg button:last-child{border-right:0}.seg button.on{background:var(--navy);color:#fff}
+.spacer{flex:1}.tag{font-size:11px;padding:3px 8px;border-radius:20px;background:#E8EFFA;color:var(--blue);white-space:nowrap}.tag.fikt{background:#fff7e6;color:#9a5b00}
+.panel{position:fixed;background:var(--bg);border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 30px rgba(11,21,38,.12);z-index:15;overflow:hidden;display:flex;flex-direction:column}
+.panel h3{margin:0;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:var(--ink3);padding:11px 14px 8px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.panel h3:before{content:"";width:14px;height:2px;background:var(--navy)}
+#left>h3,#right>h3{cursor:pointer;user-select:none}
+#left>h3:after,#right>h3:after{content:"";margin-left:auto;width:7px;height:7px;border-right:2px solid var(--ink3);border-bottom:2px solid var(--ink3);transform:rotate(-135deg);transition:transform .2s;margin-right:2px;margin-top:3px}
+#left.collapsed>h3:after,#right.collapsed>h3:after{transform:rotate(45deg);margin-top:-3px}
+#left.collapsed,#right.collapsed{bottom:auto}
+#left.collapsed>h3,#right.collapsed>h3{border-bottom:none}
+#left.collapsed>.body,#right.collapsed>.body{display:none}
+.panel .body{padding:10px 14px;overflow:auto}
+#left{left:12px;top:66px;width:330px;bottom:12px}
+#right{right:12px;top:66px;width:380px;bottom:12px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}.kpi{border:1px solid var(--line);border-top:2px solid var(--navy);border-radius:8px;padding:7px 9px;background:#fff}.kpi b{display:block;font-size:18px;color:var(--navy)}.kpi span{font-size:11px;color:var(--ink3)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12.5px;margin:6px 0}.row label{color:var(--ink2)}.row input[type=range]{width:130px}.row select{font:inherit;font-size:12px;padding:3px}
+.sec{font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--ink3);margin:12px 0 6px;display:flex;align-items:center;gap:6px}.sec:before{content:"";width:10px;height:2px;background:var(--line2)}
+table.t{width:100%;border-collapse:collapse;font-size:12px}table.t td{padding:3px 2px;border-bottom:1px solid var(--line)}table.t td:last-child{text-align:right;font-family:"IBM Plex Mono",monospace;font-size:11.5px}
+#chart{width:100%;height:150px;background:#fff;border:1px solid var(--line);border-radius:8px}
+.chk{border:1px solid var(--line);border-left:4px solid var(--line2);border-radius:8px;padding:7px 9px;margin:6px 0;background:#fff;cursor:pointer}.chk:hover{border-color:var(--line2)}
+.chk.ok{border-left-color:var(--ok)}.chk.warn{border-left-color:var(--warn)}.chk.fail{border-left-color:var(--fail)}
+.chk .h{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600}.dot{width:10px;height:10px;border-radius:50%;flex:0 0 10px}.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}.dot.fail{background:var(--fail)}
+.chk .m{font-size:11.5px;color:var(--ink2);margin-top:3px}.chk .d{display:none;font-size:11.5px;color:var(--ink2);margin-top:6px;border-top:1px dashed var(--line);padding-top:6px}.chk.open .d{display:block}.chk .d p{margin:3px 0}.chk .d b{color:var(--ink)}
+.sum{display:flex;gap:8px;margin-bottom:8px}.sum div{flex:1;text-align:center;border:1px solid var(--line);border-radius:8px;padding:6px;background:#fff;font-size:11px;color:var(--ink3)}.sum b{display:block;font-size:18px}
+.sum .ok b{color:var(--ok)}.sum .warn b{color:var(--warn)}.sum .fail b{color:var(--fail)}
+#layers{position:fixed;left:354px;bottom:12px;z-index:15;display:flex;flex-wrap:wrap;gap:6px;max-width:calc(100vw - 760px)}
+#layers button{border:1px solid var(--line2);background:var(--bg);border-radius:20px;padding:6px 11px;font:inherit;font-size:12px;color:var(--ink2);cursor:pointer}#layers button.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+#timebar{position:fixed;left:354px;right:404px;top:66px;z-index:15;display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:12.5px}
+#timebar input{flex:1}#clock{font-family:"IBM Plex Mono",monospace;font-size:14px;color:var(--navy);min-width:48px}
+#info{position:fixed;left:50%;transform:translateX(-50%);bottom:56px;z-index:16;min-width:340px;max-width:520px;display:none}
+#info .body{font-size:12.5px}#info .x{position:absolute;right:10px;top:8px;cursor:pointer;color:var(--ink3)}
+#legend{position:fixed;right:404px;bottom:12px;z-index:15;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:11px;color:var(--ink2);display:none;min-width:200px}
+#legend .bar{height:10px;border-radius:3px;margin:4px 0}
+.lbl{font:600 11px "Instrument Sans",system-ui,sans-serif;color:#fff;background:rgba(10,36,99,.88);padding:3px 7px;border-radius:5px;white-space:nowrap;pointer-events:none;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.lbl small{display:block;font-weight:400;opacity:.85;font-size:10px}
+.dim{font:600 11px "IBM Plex Mono",monospace;color:#fff;padding:2px 6px;border-radius:4px;white-space:nowrap;pointer-events:none}
+.dim.ok{background:rgba(22,163,74,.92)}.dim.warn{background:rgba(217,119,6,.95)}.dim.fail{background:rgba(220,38,38,.95)}.dim.info{background:rgba(10,36,99,.9)}
+#caption{position:fixed;left:50%;transform:translateX(-50%);top:120px;z-index:17;max-width:640px;background:rgba(10,36,99,.92);color:#fff;border-radius:12px;padding:12px 16px;font-size:14px;display:none}
+#caption b{display:block;font-size:16px;margin-bottom:3px}
+#loading{position:fixed;inset:0;z-index:50;background:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--navy)}
+#loading .bar{width:260px;height:3px;background:var(--line);border-radius:3px;overflow:hidden}#loading .bar i{display:block;height:100%;width:0;background:var(--navy);transition:width .2s}
+#foot{position:fixed;left:0;right:0;bottom:0;height:0;z-index:14}
+.hint{font-size:11px;color:var(--ink3);margin-top:6px}
+.btn{border:1px solid var(--line2);background:#fff;border-radius:7px;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer;color:var(--ink2)}.btn.pri{background:var(--navy);color:#fff;border-color:var(--navy)}
+.cap .panel,.cap #layers,.cap #timebar,.cap #top,.cap #legend,.cap #info{display:none!important}
+.cap.legend #legend{display:block!important}
+@media (max-width:1100px){#left{width:280px}#right{width:300px}#layers{left:300px;max-width:calc(100vw - 620px)}#timebar{left:300px;right:324px}}
+
+.note{font-size:11.5px;color:var(--ink2);background:#fff;border:1px solid var(--line);border-left:3px solid var(--green);border-radius:8px;padding:8px 10px;line-height:1.45}
+.note b{color:var(--ink)}
+.cand{display:flex;align-items:center;gap:8px;font-size:12px;padding:6px 8px;border:1px solid var(--line);border-radius:8px;margin:5px 0;background:#fff;cursor:pointer}.cand b{flex:1;font-weight:600}.cand.on{border-color:var(--navy);box-shadow:inset 3px 0 0 var(--navy)}
+.holo{font:600 11px "Instrument Sans",system-ui,sans-serif;color:#e6fffb;background:linear-gradient(180deg,rgba(4,47,46,.82),rgba(10,36,99,.82));border:1px solid rgba(94,234,212,.7);padding:6px 9px;border-radius:8px;min-width:170px;pointer-events:none;box-shadow:0 0 18px rgba(45,212,191,.45)}
+.holo b{display:block;font-size:12px;color:#fff}.holo span{font-weight:400;font-size:10.5px}
+.socbar{height:7px;background:rgba(255,255,255,.18);border-radius:4px;overflow:hidden;margin:4px 0}.socbar i{display:block;height:100%;background:linear-gradient(90deg,#14b8a6,#84cc16)}
+.lbl.live{background:rgba(11,21,38,.82);border:1px solid rgba(148,163,184,.5)}
+#mhint{position:fixed;left:50%;transform:translateX(-50%);top:112px;z-index:16;background:rgba(10,36,99,.9);color:#fff;font-size:12.5px;padding:7px 12px;border-radius:8px;display:none}
+#candSeg button{min-width:44px}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="app"></div>
+<div id="loading"><b>NRG Solution | Batteriespeicher Gemeindekieswerk Eschenbach</b><div class="bar"><i id="lbar"></i></div><span id="lmsg" style="font-size:12px;color:#7C879E">Geodaten werden geladen ...</span></div>
+<div id="top">
+  <div class="brand"><b>NRG Solution | BESS Gemeindekieswerk Eschenbach</b><span>Rothenburgstrasse 24a, 6274 Eschenbach LU | Parzelle 345 | 3D-Machbarkeitsstudie</span></div>
+  <div class="seg" id="candSeg" title="Standorte (Stern = Empfehlung)"></div>
+  <div class="seg" id="modeSeg"><button data-m="orbit" class="on">Übersicht</button><button data-m="plan">Plan</button><button data-m="walk">Begehen</button><button data-m="measure">Messen</button><button data-m="tour">Tour</button></div>
+  <div class="spacer"></div>
+  <span class="tag fikt">Fiktive Studie, reale Geodaten</span>
+  <button class="btn" id="btnShot" title="Bild speichern">Bild</button>
+</div>
+<div class="panel" id="left"><h3>Anlage und Energiefluss</h3><div class="body" id="leftBody"></div></div>
+<div class="panel" id="right"><h3>Standortbewertung und Prüfung</h3><div class="body" id="rightBody"></div></div>
+<div id="timebar"><span>Zeit</span><span id="clock">10:30</span><input type="range" id="tSlider" min="0" max="1439" value="630"><button class="btn" id="play">Pause</button><select id="speed" class="btn"><option value="30">30x</option><option value="120" selected>120x</option><option value="600">600x</option></select></div>
+<div id="layers"></div>
+<div id="legend"></div>
+<div id="mhint"></div>
+<div id="caption"></div>
+<div class="panel" id="info"><span class="x" id="infoX">schliessen</span><h3 id="infoT">Info</h3><div class="body" id="infoB"></div></div>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

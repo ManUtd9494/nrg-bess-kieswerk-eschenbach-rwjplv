@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://ManUtd9494.github.io/nrg-bess-kieswerk-eschenbach-rwjplv/sitemap.xml
