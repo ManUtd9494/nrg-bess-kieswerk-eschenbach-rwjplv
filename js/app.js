@@ -110,7 +110,7 @@ function wallTex(kind) {
   if (kind === 'metal') return canvasTex(256, 256, (g, w, h) => { noiseCanvas(g, w, h, [196, 201, 206], 10, 5); for (let i = 0; i < 8; i++) { const x = i * w / 8; g.fillStyle = 'rgba(70,80,90,.35)'; g.fillRect(x, 0, 4, h); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(x + 5, 0, 3, h); } }, true, [1 / 2, 1 / 2]);
   if (kind === 'wood') return canvasTex(256, 256, (g, w, h) => { noiseCanvas(g, w, h, [150, 132, 112], 26, 9); for (let i = 0; i < 16; i++) { const x = i * w / 16; g.fillStyle = 'rgba(40,30,20,.45)'; g.fillRect(x, 0, 2, h); g.fillStyle = `rgba(${120 + Math.random() * 40},${105 + Math.random() * 30},${85 + Math.random() * 25},.25)`; g.fillRect(x + 2, 0, w / 16 - 2, h); } }, true, [1 / 2, 1 / 2]);
   return canvasTex(256, 256, (g, w, h) => noiseCanvas(g, w, h, [178, 176, 170], 22, 4), true, [1 / 3, 1 / 3]); }
-const WALLMAT = [new THREE.MeshStandardMaterial({ map: wallTex('house'), roughness: 0.9 }), new THREE.MeshStandardMaterial({ map: wallTex('metal'), roughness: 0.55, metalness: 0.35 }), new THREE.MeshStandardMaterial({ map: wallTex('concrete'), roughness: 0.95 }), new THREE.MeshStandardMaterial({ map: wallTex('wood'), roughness: 0.85 })];
+const WALLMAT = [new THREE.MeshStandardMaterial({ map: wallTex('house'), roughness: 0.9, side: THREE.DoubleSide, envMapIntensity: 0.45 }), new THREE.MeshStandardMaterial({ map: wallTex('metal'), roughness: 0.55, metalness: 0.35, side: THREE.DoubleSide, envMapIntensity: 0.45 }), new THREE.MeshStandardMaterial({ map: wallTex('concrete'), roughness: 0.95, side: THREE.DoubleSide, envMapIntensity: 0.45 }), new THREE.MeshStandardMaterial({ map: wallTex('wood'), roughness: 0.85, side: THREE.DoubleSide, envMapIntensity: 0.45 })];
 { // Wände nach Klasse
   const P = BLD.wall_pos, Nn = BLD.wall_nrm, U = BLD.wall_uv, Cl = BLD.wall_cls; const nT = P.length / 9;
   for (let cls = 0; cls < 4; cls++) { const pos = [], nrm = [], uv = [];
@@ -167,8 +167,8 @@ const trunkGeo = (() => { const c = new THREE.CylinderGeometry(0.035, 0.06, 0.5,
 const matTreeC = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.95, envMapIntensity: 0.3 }), matTreeD = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.95, envMapIntensity: 0.3 }), matTrunk = new THREE.MeshStandardMaterial({ color: 0x4a3b2c, roughness: 1 });
 { const r = mulberry32(17); const mc = [], md = [], mt = [], cc = [], cd = []; const q = new THREE.Quaternion(), col = new THREE.Color();
   const mtx = (x, y, z, yaw, s) => new THREE.Matrix4().compose(V3(x, y, z), q.setFromAxisAngle(V3(0, 1, 0), yaw).clone(), V3(s[0], s[1], s[2]));
-  const CANDS = SITE.candidates.map(c => c.poly);
-  for (const [x, z, h, rr, con, R, Gc, B] of TREES) { if (CANDS.some(p => EN.pip([x, z], p) || EN.lineDist([x, z], p, true)[0] < Math.min(3, rr * 0.7))) continue; const g = dtmAt(x, z); const yaw = r() * 6.28; col.setRGB(Math.min(1, R / 255 * 1.35), Math.min(1, Gc / 255 * 1.35), Math.min(1, B / 255 * 1.3), THREE.SRGBColorSpace);
+  const CANDS = SITE.candidates.map(c => c.poly); const TRP = SITE.trafo.poly;
+  for (const [x, z, h, rr, con, R, Gc, B] of TREES) { if (CANDS.some(p => EN.pip([x, z], p) || EN.lineDist([x, z], p, true)[0] < Math.min(3, rr * 0.7))) continue; if (TRP && (EN.pip([x, z], TRP) || EN.lineDist([x, z], TRP, true)[0] < rr + 1.0)) continue; const g = dtmAt(x, z); const yaw = r() * 6.28; col.setRGB(Math.min(1, R / 255 * 1.35), Math.min(1, Gc / 255 * 1.35), Math.min(1, B / 255 * 1.3), THREE.SRGBColorSpace);
     if (con) { mc.push(mtx(x, g, z, yaw, [rr * 2.1, h * 0.92, rr * 2.1])); cc.push(col.clone()); mt.push(mtx(x, g, z, yaw, [h * 0.45, h * 0.5, h * 0.45])); }
     else { md.push(mtx(x, g + h * 0.22, z, yaw, [rr * 2.05, h * 0.72, rr * 2.05])); cd.push(col.clone()); mt.push(mtx(x, g, z, yaw, [h * 0.55, h * 0.6, h * 0.55])); } }
   const inst = (geo, mat, arr, cols) => { const im = new THREE.InstancedMesh(geo, mat, arr.length); arr.forEach((m, i) => { im.setMatrixAt(i, m); if (cols) im.setColorAt(i, cols[i]); }); im.castShadow = true; im.receiveShadow = true; world.add(im); return im; };
@@ -279,7 +279,7 @@ function buildBESS(ev) {
   clearGroup(bessGroup); fans.length = 0; beacons.length = 0; lamps.length = 0; CUR = ev; const L = ev.layout; const y = L.ybase;
   // Kiesbett mit Randabschluss und Streifenfundamenten
   const padShape = new THREE.Shape(L.pad.map(p => new THREE.Vector2(p[0], -p[1])));
-  const padG = new THREE.ExtrudeGeometry(padShape, { depth: 0.5, bevelEnabled: false }); padG.rotateX(-Math.PI / 2); const pad = new THREE.Mesh(padG, M.gravel); pad.position.y = y - 0.5; pad.receiveShadow = true; bessGroup.add(pad);
+  const padG = new THREE.ExtrudeGeometry(padShape, { depth: 1.6, bevelEnabled: false }); padG.rotateX(-Math.PI / 2); const pad = new THREE.Mesh(padG, M.gravel); pad.position.y = y - 1.6; pad.receiveShadow = true; bessGroup.add(pad);
   for (let i = 0; i < 4; i++) { const a = L.pad[i], b = L.pad[(i + 1) % 4]; const d = Math.hypot(b[0] - a[0], b[1] - a[1]); const m = new THREE.Mesh(new THREE.BoxGeometry(d, 0.18, 0.1), M.concrete); m.position.set((a[0] + b[0]) / 2, y + 0.04, (a[1] + b[1]) / 2); m.rotation.y = -Math.atan2(b[1] - a[1], b[0] - a[0]); bessGroup.add(m); }
   for (const u of L.units) {
     const grp = u.type === 'battery' ? makeContainer(RES.P.unit) : makeSkid(RES.P.skid);
@@ -298,6 +298,32 @@ function buildBESS(ev) {
   // Feuerlöscher / Not-Aus
   const ex = new THREE.Group(); box(0.5, 0.8, 0.3, M.red, 0, 0.9, 0, ex); ex.position.set(f1[0] - Math.cos(fa) * 1.2 + L.nv[0] * 0.3, y, f1[1] - Math.sin(fa) * 1.2 + L.nv[1] * 0.3); ex.rotation.y = -fa; bessGroup.add(ex);
 }
+
+// ------------------------------------------------------------------ Trafostation: flacher Betonanbau an der Heizzentrale
+function makeTrafoStation(T) {
+  const g = new THREE.Group(); const y = T.y, h = T.h || 3.0; const P = T.poly;
+  const conc = new THREE.MeshStandardMaterial({ map: canvasTex(512, 256, (c, w, hh) => { noiseCanvas(c, w, hh, [182, 180, 173], 22, 61); c.strokeStyle = 'rgba(90,90,85,.35)'; c.lineWidth = 2; for (let x = 0; x < w; x += 128) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, hh); c.stroke(); } c.beginPath(); c.moveTo(0, hh / 2); c.lineTo(w, hh / 2); c.stroke(); for (let i = 0; i < 40; i++) { c.fillStyle = 'rgba(60,60,55,.25)'; c.beginPath(); c.arc(Math.random() * w, Math.random() * hh, 2, 0, 7); c.fill(); } }, true, [0.4, 0.33]), roughness: 0.92, side: THREE.DoubleSide, envMapIntensity: 0.4 });
+  const sh = new THREE.Shape(P.map(p => new THREE.Vector2(p[0], -p[1]))); const body = new THREE.ExtrudeGeometry(sh, { depth: h, bevelEnabled: false }); body.rotateX(-Math.PI / 2);
+  // UV für Seitenwände aus Weltkoordinaten (Meter)
+  const pa = body.attributes.position, uv = body.attributes.uv; for (let i = 0; i < pa.count; i++) uv.setXY(i, pa.getX(i) + pa.getZ(i), pa.getY(i));
+  const m = new THREE.Mesh(body, conc); m.position.y = y - 0.3; m.castShadow = true; m.receiveShadow = true; g.add(m);
+  // Dachrand (Attika) und Flachdach mit Kies
+  const c = EN.centroid(P); const big = P.map(p => [c[0] + (p[0] - c[0]) * 1.06, c[1] + (p[1] - c[1]) * 1.06]);
+  const capG = new THREE.ExtrudeGeometry(new THREE.Shape(big.map(p => new THREE.Vector2(p[0], -p[1]))), { depth: 0.18, bevelEnabled: false }); capG.rotateX(-Math.PI / 2);
+  const cap = new THREE.Mesh(capG, M.concrete); cap.position.y = y + h - 0.3; cap.castShadow = true; g.add(cap);
+  const roofG = new THREE.ShapeGeometry(new THREE.Shape(P.map(p => new THREE.Vector2(p[0], -p[1])))); roofG.rotateX(-Math.PI / 2); const roof = new THREE.Mesh(roofG, M.gravel); roof.position.y = y + h - 0.1; g.add(roof);
+  // Türen und Lüftungsgitter auf der Nordseite (Kante P3 -> P2), Gitter auf der Westseite
+  const doorTexT = canvasTex(256, 512, (c2, w, hh) => { noiseCanvas(c2, w, hh, [128, 134, 138], 10, 63); c2.strokeStyle = '#3b4146'; c2.lineWidth = 6; c2.strokeRect(6, 6, w - 12, hh - 12); c2.fillStyle = '#2e3337'; for (let yy = 40; yy < 150; yy += 12) c2.fillRect(30, yy, w - 60, 6); for (let yy = hh - 150; yy < hh - 40; yy += 12) c2.fillRect(30, yy, w - 60, 6); c2.drawImage(SIGN.hv.image, w / 2 - 55, 200, 110, 110); c2.fillStyle = '#c9ced3'; c2.fillRect(w - 40, hh / 2, 18, 40); });
+  const dmat = new THREE.MeshStandardMaterial({ map: doorTexT, metalness: 0.5, roughness: 0.45 });
+  const face = (a, b, k, wD, hD, mat, off = 0.02) => { const dx = b[0] - a[0], dz = b[1] - a[1]; const L = Math.hypot(dx, dz); const ux = dx / L, uz = dz / L; const cxp = c; const mx = a[0] + dx * k, mz = a[1] + dz * k; let nx = uz, nz = -ux; if ((mx - cxp[0]) * nx + (mz - cxp[1]) * nz < 0) { nx = -nx; nz = -nz; }
+    const pl = new THREE.Mesh(new THREE.PlaneGeometry(wD, hD), mat); pl.position.set(mx + nx * off, y + hD / 2 - 0.02, mz + nz * off); pl.rotation.y = Math.atan2(nx, nz); g.add(pl); return pl; };
+  face(P[3], P[2], 0.3, 1.25, 2.25, dmat); face(P[3], P[2], 0.62, 1.25, 2.25, dmat);
+  const grill = new THREE.MeshStandardMaterial({ map: canvasTex(256, 128, (c2, w, hh) => { c2.fillStyle = '#9aa1a6'; c2.fillRect(0, 0, w, hh); c2.fillStyle = '#23282c'; for (let yy = 8; yy < hh - 6; yy += 10) c2.fillRect(8, yy, w - 16, 5); }), metalness: 0.5, roughness: 0.5 });
+  const gr = face(P[0], P[3], 0.5, 1.6, 0.6, grill); gr.position.y = y + 2.2;
+  // Kiesstreifen und Kabelschacht vor den Türen
+  const cs = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.06, 1.0), M.steel); const a = P[3], b = P[2]; cs.position.set((a[0] + b[0]) / 2 + (c[0] - (a[0] + b[0]) / 2) * -0.6, y + 0.02, (a[1] + b[1]) / 2 + (c[1] - (a[1] + b[1]) / 2) * -0.6); g.add(cs);
+  g.traverse(o => { if (o.isMesh) o.userData.trafo = true; }); return g; }
+const TRAFO_MODEL = makeTrafoStation(SITE.trafo); world.add(TRAFO_MODEL); pickables.push(TRAFO_MODEL);
 // ------------------------------------------------------------------ AR-Ebenen: Masse, Abstände, Puffer, Fahrwege, Zonen, Lärm, Kabel, Raster
 const LAYERS = { dims: false, dist: true, wald: false, roads: false, zones: false, flows: true, noise: false, labels: true, grid: false, cands: false, cable: true, nisv: false };
 for (const kv of (Q.get('layers') || '').split(',').filter(Boolean)) { const [k, v] = kv.split(':'); if (k in LAYERS) LAYERS[k] = v === '1'; }
@@ -372,7 +398,7 @@ function buildDynamicAR(ev) {
   clearGroup(AR.cable);
   const route = ev.route.pts; const rp = drapedPts(route, 0.25, 1, dtmAt); arLine(rp, 0xf97316, 0.12, 0.95, AR.cable);
   const mid = route[Math.floor(route.length / 2)]; makeLabel(`MS-Kabel zur Trafostation ${fmt(ev.route.len)} m<small>Rohrblock ca. 0.8 m tief, Lage schematisch</small>`, 'dim info', mid[0], dtmAt(mid[0], mid[1]) + 1.8, mid[1], AR.cable);
-  { const t = SITE.trafo; const g = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 0.9, 0.08, 32), new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.7 })); g.position.set(t.c[0], t.y + 0.1, t.c[1]); AR.cable.add(g); }
+  
   // Netzanschluss CKW (schematisch)
   arLine(drapedPts(SITE.grid.pts, 0.25, 1, dtmAt), 0x2563eb, 0.1, 0.8, AR.cable);
   // NISV-Radius
@@ -409,7 +435,7 @@ function buildFlows(ev) {
   NODES.pvOst = pvC('Halle Ost (Werkhalle)'); NODES.pvNord = pvC('Halle Nord (Materialboxen)'); NODES.pvHeiz = pvC('Heizzentrale EVB');
   NODES.hv = V3(SITE.hv.c[0], dtmAt(SITE.hv.c[0], SITE.hv.c[1]) + 6, SITE.hv.c[1]);
   NODES.bat = V3(bat.c[0], y + bat.H + 1.0, bat.c[1]); NODES.skid = V3(sk.c[0], y + sk.H + 0.8, sk.c[1]);
-  NODES.trafo = V3(SITE.trafo.c[0], SITE.trafo.y + 4.5, SITE.trafo.c[1]);
+  NODES.trafo = V3(SITE.trafo.c[0], SITE.trafo.y + (SITE.trafo.h || 3) + 1.6, SITE.trafo.c[1]);
   const g0 = SITE.grid.pts[SITE.grid.pts.length - 1]; NODES.grid = V3(g0[0], dtmAt(g0[0], g0[1]) + 5, g0[1]);
   NODES.heiz = V3(SITE.heiz.c[0] + 4, SITE.trafo.y + 13.5, SITE.heiz.c[1] - 2);
   const mk = (id, a, b, type, bump) => { const A = NODES[a], B = NODES[b]; const mid = A.clone().add(B).multiplyScalar(0.5); mid.y += bump ?? Math.min(16, 3 + A.distanceTo(B) * 0.12);
@@ -467,7 +493,7 @@ function renderPanels() {
   $('#rightBody').innerHTML = `<div class="sum"><div class="ok"><b>${cnt.ok}</b>erfüllt</div><div class="warn"><b>${cnt.warn}</b>kritisch</div><div class="fail"><b>${cnt.fail}</b>nicht erfüllt</div></div>
    <div class="hint" style="margin:0 0 8px">${ev.cand.name}: ${ev.cand.desc || ''} ${ev.order ? 'Anordnung: ' + ev.order + '.' : ''}</div>
    <div class="sec">Standortvergleich (automatisch)</div>${RES.ranked.map((r, i) => `<div class="cand ${r.cand.id === curCand ? 'on' : ''}" data-c="${r.cand.id}"><span class="dot ${r.cnt.fail ? 'fail' : r.cnt.warn > 1 ? 'warn' : 'ok'}"></span><b>${i + 1}. ${r.cand.name}</b><span class="mono">${r.score.toFixed(0)}</span></div>`).join('')}
-   <div class="hint">Bewertet: Zone, Waldabstand, Fahrwege, Brandschutz, Altlasten, Naturgefahren, Platz, Kabellänge, Lärm, NISV, PV-Nähe. ${best.cand.id === curCand ? 'Dieser Standort ist die Empfehlung.' : 'Empfehlung: ' + best.cand.name + '.'}</div>
+   <div class="hint">Varianten C1 und C4, bewertet nach Zone, Waldabstand, Fahrwege, Brandschutz, Altlasten, Naturgefahren, Platz, Kabellänge, Lärm, NISV und PV-Nähe. ${best.cand.id === curCand ? 'Dieser Standort ist die Empfehlung.' : 'Empfehlung: ' + best.cand.name + '.'}</div>
    <div class="sec">Prüfpunkte ${ev.cand.id}</div>${ev.checks.map(c => `<div class="chk ${c.status}"><div class="h"><span class="dot ${c.status}"></span>${c.title}</div><div class="m">${c.measured}</div><div class="d"><p><b>Grundlage:</b> ${c.norm}</p></div></div>`).join('')}`;
   document.querySelectorAll('.chk').forEach(el => el.onclick = () => el.classList.toggle('open'));
   document.querySelectorAll('.cand').forEach(el => el.onclick = () => selectCandidate(el.dataset.c));
@@ -508,11 +534,11 @@ function updateLegend() { const lg = $('#legend'); if (!lg) return; let h = '';
 // Kameramodi
 const TOUR = [
   { c: [20, 10], d: 330, el: 42, az: -25, h: 'Gemeindekieswerk Eschenbach', b: 'Reales Gelände (swissALTI3D, swissSURFACE3D), Gebäude (swissBUILDINGS3D 3.0) und Luftbild 10 cm. Der Batteriespeicher steht am Ostrand hinter der Werkhalle mit PV-Dach.' },
-  { c: [20, 20], d: 220, el: 70, az: -10, h: 'Fünf Standorte automatisch geprüft', b: 'Zone, Waldabstand, Fahrwege, Brandschutz, Altlasten, Gefahren, Platz, Kabelweg, Lärm und NISV. Am Rand hinter der Werkhalle stört die Anlage den Werkverkehr am wenigsten.', layers: { cands: true, roads: true } },
+  { c: [20, 20], d: 220, el: 70, az: -10, h: 'Zwei Varianten am Rand des Areals', b: 'Zwei Randstandorte: C1 hinter der Werkhalle mit PV-Dach und C4 an der Nordostecke des Kieslagers. Beide liegen ausserhalb des Lkw-Kreislaufs; geprüft sind Zone, Waldabstand, Fahrwege, Brandschutz, Kabelweg, Lärm und NISV.', layers: { cands: true, roads: true } },
   { k: 'bess', d: 32, el: 28, az: -70, h: 'Batteriecontainer und MS-Skid', b: '20-ft-HC-Container mit rund 5 MWh, daneben der Skid mit Wechselrichter, Trafo und MS-Schaltanlage. Türseite zur Fahrgasse, Kühlaggregat an der Stirnseite.' },
   { k: 'bess', d: 40, el: 55, az: -110, h: 'AR-Messungen im echten Massstab', b: 'Masse der Container, Abstand zur Werkhalle (Brandschutz), freie Fahrgasse und Abstand zum Wald werden live aus dem Geländemodell berechnet.', layers: { dims: true, dist: true, grid: true } },
   { k: 'bess', d: 160, el: 50, az: -60, h: 'Waldabstand eingehalten', b: 'Der Standort liegt über 50 m von der statischen Waldgrenze entfernt. Die Bänder zeigen 10 m (Ausnahme) und 20 m (§ 136 PBG LU).', layers: { wald: true } },
-  { c: [40, 70], d: 70, el: 35, az: -150, h: 'Trafostation und Heizzentrale', b: 'Die Heizzentrale an der Einfahrt ist ein Holzschnitzel-Heizwerk ohne BHKW. Das MS-Kabel führt rund 85 m zur vermuteten Trafostation an ihrer Nordseite.', layers: { cable: true } },
+  { c: [40, 70], d: 70, el: 35, az: -150, h: 'Trafostation und Heizzentrale', b: 'Die Heizzentrale an der Einfahrt ist ein Holzschnitzel-Heizwerk ohne BHKW. Die Trafostation ist der flache Betonanbau an ihrer Nordseite; dorthin führt das MS-Kabel des Speichers.', layers: { cable: true } },
   { c: [10, -20], d: 160, el: 38, az: -30, h: 'Energiefluss mit der bestehenden PV', b: 'Die PV-Dächer (268.8 kWp) speisen das Kieswerk, Überschüsse laden den Speicher. In der Spitze entlädt er und hält den Netzbezug unter der Bezugsgrenze.', layers: { flows: true }, t: 12.5 },
   { k: 'bess', d: 180, el: 60, az: -40, h: 'Lärm an den Wohnhäusern', b: 'Die Häuser am Rüchligrain stehen rund 20 m höher am Hang. Das Gelände schirmt ab, die Planungswerte ES II werden nach dieser Abschätzung eingehalten.', layers: { noise: true } },
   { k: 'bess', d: 60, el: 22, az: -90, h: 'Nachtbetrieb', b: 'Nachts lädt der Speicher bei Schwachlast unterhalb der Bezugsgrenze, Kühlung im leisen Nachtmodus, Beleuchtung bewegungsgesteuert.', t: 22.5 },
@@ -541,6 +567,7 @@ renderer.domElement.addEventListener('pointerup', (e) => { const pd = window.__p
     if (!measure.a) measure.a = p; else { const a = measure.a; const d = a.distanceTo(p), dh = p.y - a.y, dxz = Math.hypot(p.x - a.x, p.z - a.z); addDim3(a.clone().add(V3(0, 0.3, 0)), p.clone().add(V3(0, 0.3, 0)), `${d.toFixed(2)} m | horizontal ${dxz.toFixed(2)} m | Höhe ${dh >= 0 ? '+' : ''}${dh.toFixed(2)} m`, 'info', measure.group, { top: true, r: 0.05 }); measure.a = null; } return; }
   let o = hit.object; while (o && !o.userData.info && o.parent) o = o.parent; const info = o && o.userData.info;
   if (info) showInfo(info.type === 'battery' ? `${info.id}: DC-Batteriecontainer 20 ft HC` : `${info.id}: MS-Power-Skid`, info.type === 'battery' ? `Masse ${RES.P.unit.L} x ${RES.P.unit.W} x ${RES.P.unit.H} m, ca. ${fmt(RES.P.unit.kWh / 1000, 1)} MWh brutto, Flüssigkeitskühlung, Gaswarnung, Überdruckklappen, Löschanlage im Container (Herstellerangaben einholen).` : `Wechselrichter ${fmt(RES.P.nUnits * 2.5, 1)} MW, Trafo ${fmt(RES.P.nUnits * 2.75, 2)} MVA mit Esteröl und Auffangwanne, MS-Schaltanlage mit Abgang zur Trafostation.`);
+  else if (hit.object.userData.trafo) showInfo('Trafostation CKW (vermutet)', SITE.trafo.note + ' Der Batteriespeicher wird über sein MS-Kabel an ein neues Feld dieser Station angeschlossen.');
   else if (hit.object.name === 'pv') showInfo('Bestehende PV-Anlage', 'Kieswerk Rothenburgstrasse 24a: 114.38 kWp (2021) und 138.99 kWp (2023); Heizzentrale 24b: 15.44 kWp (BFE-Register der Elektrizitätsproduktionsanlagen). Lage der Felder aus dem Luftbild.');
   else if (Math.hypot(hit.point.x - SITE.heiz.c[0], hit.point.z - SITE.heiz.c[1]) < 16) showInfo('Heizzentrale Energieverbund Eschenbach AG', 'Holzschnitzel-Heizwerk mit Elektrofilter, 900 kW Wärme (Endausbau rund 4 MW), Holzfassade (Label Schweizer Holz), begrüntes Dach mit 15.44 kWp PV. Kein BHKW registriert.'); });
 function showInfo(t, b) { $('#infoT').textContent = t; $('#infoB').innerHTML = b; $('#info').style.display = 'flex'; } $('#infoX').onclick = () => $('#info').style.display = 'none';

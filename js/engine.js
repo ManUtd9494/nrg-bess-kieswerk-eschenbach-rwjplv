@@ -225,7 +225,8 @@ export function evaluate(site, cand, P, heightAt = () => 0, dtmAt = heightAt) {
   const haz = site.zones.filter(z => /Hangmuren|Rutsch/.test(z.t)).some(z => L.pad.some(p => pip(p, z.poly)));
   push({ id: 'GEFAHR', title: 'Naturgefahren (Gefahrenkarte)', norm: 'Gefahrenkarte Kanton Luzern', measured: haz ? 'in Gefahrengebiet Spontanrutschung / Hangmure' : 'kein Gefahrengebiet; Perimeter vertiefte Beurteilung', status: haz ? 'fail' : 'ok' });
   // Platz
-  push({ id: 'PLATZ', title: `Platzbedarf ${P.nUnits} Container + MS-Skid`, norm: 'Herstellerabstände, Türschwenkbereich, Wartungsgang', measured: L.fits ? `passt (Anlage ${Math.abs(area(L.pad)).toFixed(0)} m², Zaunfläche ${Math.abs(area(L.fence)).toFixed(0)} m²)` : 'passt nicht in die Fläche', status: L.fits ? 'ok' : 'fail' });
+  const hitB = (site.bpolys || []).filter(b => minDist(L.outline || L.fence, b.poly)[0] < 0.3).map(b => b.name);
+  push({ id: 'PLATZ', title: `Platzbedarf ${P.nUnits} Container + MS-Skid`, norm: 'Herstellerabstände, Türschwenkbereich, Wartungsgang, keine Überschneidung mit Bauten', measured: !L.fits ? 'passt nicht in die Fläche' : hitB.length ? `überschneidet ${[...new Set(hitB)].join(', ')}` : `passt (Anlage ${Math.abs(area(L.pad)).toFixed(0)} m², Zaunfläche ${Math.abs(area(L.fence)).toFixed(0)} m², keine Überschneidung)`, status: L.fits && !hitB.length ? 'ok' : 'fail' });
   // Kabel zur Trafostation
   const skid = L.units.find(u => u.type === 'skid'); const route = cableRoute(site, skid.c, site.trafo.c);
   push({ id: 'KABEL', title: 'MS-Kabel zur Trafostation', norm: 'NIN / ESTI; Spannungsfall, Kosten', measured: `${route.len.toFixed(0)} m Kabeltrasse`, status: route.len <= R.cableOk ? 'ok' : route.len <= R.cableWarn ? 'warn' : 'fail' });
@@ -246,7 +247,7 @@ export function evaluate(site, cand, P, heightAt = () => 0, dtmAt = heightAt) {
   dims.push({ a: centroid(L.pad), b: site.receptors.find(r => r.name === hN).c, d: dH, label: 'nächstes Wohnhaus', limit: 0, status: checks.find(c => c.id === 'LSV').status, key: 'haus' });
   dims.push({ a: skid.c, b: site.trafo.c, d: route.len, label: 'Kabel zum Trafo', limit: 0, status: 'info', key: 'kabel', route: route.pts });
   // Bewertung
-  const w = { ZONE: 30, WALD: 25, FAHRWEG: 25, BRAND: 10, ALTLAST: 10, GEFAHR: 30, PLATZ: 30, KABEL: 8, LSV: 15, NISV: 15, PV: 6 };
+  const w = { ZONE: 30, WALD: 40, FAHRWEG: 25, BRAND: 10, ALTLAST: 10, GEFAHR: 30, PLATZ: 30, KABEL: 8, LSV: 15, NISV: 15, PV: 6 };
   let score = 100; for (const c of checks) score -= (w[c.id] || 5) * (c.status === 'fail' ? 1 : c.status === 'warn' ? 0.4 : 0);
   const cnt = { ok: checks.filter(c => c.status === 'ok').length, warn: checks.filter(c => c.status === 'warn').length, fail: checks.filter(c => c.status === 'fail').length };
   return { cand, layout: L, checks, dims, noise: nres, route, nisv: nis, score: Math.max(0, score), cnt };
